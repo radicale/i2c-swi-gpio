@@ -4,11 +4,11 @@ This kernel module allows you to interface to a SWI device such as the Microchip
 
 ## Usage
 
-You must specify the GPIO number through the _gpio_num_ module parameter:
+You must specify the GPIO number through the _gpio_num_ module parameter.  For example:
 
 ```insmod i2c-swi-gpio.ko gpio_num=82```
 
-If successful in communicating with the SWI device, a new i2c device should be added to the system.  The emulated i2c address for the device is _0x60_, but this can be changed through the _i2c_addr_ module parameter.
+If successful in communicating with the SWI device, a new i2c adapter should be added to the system.  The default emulated i2c address for the device is _0x60_, but this can be changed through the _i2c_addr_ module parameter.
 
 ## Building
 
