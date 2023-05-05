@@ -165,8 +165,10 @@ static s32 swi_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num) {
 
     for (i = 0; i < num; i++) {
         /* Only handle our address or wake */
-        if (msgs[i].addr != i2c_addr && msgs[i].addr != 0)
+        if (msgs[i].addr != i2c_addr && msgs[i].addr != 0) {
+            local_irq_restore(flags);
             return -ENODEV;
+        }
 
         /* Quick command, ignore */
         if (msgs[i].len == 0)
@@ -178,11 +180,15 @@ static s32 swi_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num) {
             udelay(20);
 
             /* First byte should hold the byte count */
-            if ((err = recv_byte(&msgs[i].buf[0])) != 0)
+            if ((err = recv_byte(&msgs[i].buf[0])) != 0) {
+                local_irq_restore(flags);
                 return err;
+            }
 
-            if (msgs[i].buf[0] < 4 || msgs[i].buf[0] > 155)
+            if (msgs[i].buf[0] < 4 || msgs[i].buf[0] > 155) {
+                local_irq_restore(flags);
                 return -EIO;
+            }
 
             if (msgs[i].len >= msgs[i].buf[0]) {
                 len = msgs[i].buf[0];
@@ -192,14 +198,18 @@ static s32 swi_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num) {
             }
 
             for (j = 1; j < len; j++) {
-                if ((err = recv_byte(&msgs[i].buf[j])) != 0)
+                if ((err = recv_byte(&msgs[i].buf[j])) != 0) {
+                    local_irq_restore(flags);
                     return err;
+                }
             }
 
             /* Read a minumum of 4 bytes */
             for (; j < 4; j++) {
-                if ((err = recv_byte(NULL)) != 0)
+                if ((err = recv_byte(NULL)) != 0) {
+                    local_irq_restore(flags);
                     return err;
+                }
             }
 
         } else {
@@ -209,6 +219,7 @@ static s32 swi_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num) {
                     send_wake();
                     continue;
                 } else {
+                    local_irq_restore(flags);
                     return -ENODEV;
                 }
             }
@@ -226,16 +237,22 @@ static s32 swi_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num) {
             }
 
             /* Must now be a command or we don't support it */
-            if (msgs[i].buf[0] != 3)
+            if (msgs[i].buf[0] != 3) {
+                local_irq_restore(flags);
                 return -EOPNOTSUPP;
+            }
 
             /* Some sanity checks on the message length */
-            if (msgs[i].buf[1] < 4 || msgs[i].buf[1] > 155)
+            if (msgs[i].buf[1] < 4 || msgs[i].buf[1] > 155) {
+                local_irq_restore(flags);
                 return -EINVAL;
+            }
 
             /* Length should equal count + 1 */
-            if (msgs[i].len != (msgs[i].buf[1] + 1))
+            if (msgs[i].len != (msgs[i].buf[1] + 1)) {
+                local_irq_restore(flags);
                 return -EINVAL;
+            }
 
             /* Send command sequence */
             send_byte(0x77);
